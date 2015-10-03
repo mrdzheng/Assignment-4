@@ -12,6 +12,7 @@ public enum PascalErrorCode
 {
     ALREADY_FORWARDED("Already specified in FORWARD"),
     CASE_CONSTANT_REUSED("CASE constant reused"),
+    EXTRA_COMMA(" Extra Comma"),
     IDENTIFIER_REDEFINED("Redefined identifier"),
     IDENTIFIER_UNDEFINED("Undefined identifier"),
     INCOMPATIBLE_ASSIGNMENT("Incompatible assignment"),
@@ -33,6 +34,7 @@ public enum PascalErrorCode
     INVALID_VAR_PARM("Invalid VAR parameter"),
     MIN_GT_MAX("Min limit greater than max limit"),
     MISSING_BEGIN("Missing BEGIN"),
+    MISSING_CLOSE_SQUARE_BRACKET("Missing close square bracket"),
     MISSING_COLON("Missing :"),
     MISSING_COLON_EQUALS("Missing :="),
     MISSING_COMMA("Missing ,"),

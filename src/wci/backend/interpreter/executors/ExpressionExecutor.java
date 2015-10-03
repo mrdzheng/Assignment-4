@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import wci.intermediate.*;
 import wci.intermediate.icodeimpl.*;
 import wci.backend.interpreter.*;
+import java.util.TreeSet;
 
 import static wci.intermediate.symtabimpl.SymTabKeyImpl.*;
 import static wci.intermediate.icodeimpl.ICodeNodeTypeImpl.*;
@@ -93,6 +94,36 @@ public class ExpressionExecutor extends StatementExecutor
                 boolean value = (Boolean) execute(expressionNode);
                 return !value;
             }
+            case SETS:
+            {
+                // Get the NOT node's expression node child.
+                ArrayList<ICodeNode> children = node.getChildren();
+                TreeSet<Integer> values = new TreeSet<>();
+                int prev = 0;
+                for (ICodeNode x : children)
+                {
+                    if (x.getType() == SUBRANGE)
+                    {
+                        setUpSubRangeSet(prev,(int)x.getAttribute(VALUE), values);
+                        prev = (int)  x.getAttribute(VALUE) ;
+                    } else
+                    {
+                        if(x.getAttribute(VALUE)!=null)
+                        {
+                            values.add((Integer) x.getAttribute(VALUE));
+                            prev = (int)  x.getAttribute(VALUE) ;
+                        }
+                        else //it must be an identifier.
+                        {
+                            int val = (int) execute(x);
+                            values.add(val);
+                            prev = val ;
+                        }
+                    }
+                }
+                return values;
+ 
+            }
 
             // Must be a binary operator.
             default: return executeBinaryOperator(node, nodeType);
@@ -121,8 +152,14 @@ public class ExpressionExecutor extends StatementExecutor
         Object operand1 = execute(operandNode1);
         Object operand2 = execute(operandNode2);
 
-        boolean integerMode = (operand1 instanceof Integer) &&
-                              (operand2 instanceof Integer);
+        boolean setMode = (operand1 instanceof TreeSet)
+                && (operand2 instanceof TreeSet);
+
+        boolean integerMode = (operand1 instanceof Integer)
+                && (operand2 instanceof Integer);
+
+        boolean specialInMode = (operand1 instanceof Integer)
+                && (operand2 instanceof TreeSet);
 
         // ====================
         // Arithmetic operators
@@ -175,8 +212,57 @@ public class ExpressionExecutor extends StatementExecutor
                         }
                     }
                 }
-            }
-            else {
+            } else if (setMode)
+            {
+
+                TreeSet<Integer> value1 = (TreeSet) operand1;
+                TreeSet<Integer> value2 = (TreeSet) operand2;
+
+                switch (nodeType)
+                {
+                    case ADD:    // union of the two sets  
+                    {
+                        TreeSet<Integer> finalSet = new TreeSet<Integer>();
+                        for (Integer x : value1)
+                        {
+                            finalSet.add(x);
+                        }
+                        for (Integer y : value2)
+                        {
+                            finalSet.add(y);
+                        }
+                        return finalSet;
+
+                    }
+                    case SUBTRACT: //difference of the two sets.
+                    {
+                        TreeSet<Integer> finalSet = new TreeSet<Integer>();
+                        for (Integer x : value1)
+                        {
+                            if (!value2.contains(x))
+                            {
+                                finalSet.add(x);
+                            }
+                        }
+                        return finalSet;
+
+                    }
+                    case MULTIPLY: //intesection of the two sets.
+                    {
+                        TreeSet<Integer> finalSet = new TreeSet<>();
+                        for (Integer x : value1)
+                        {
+
+                            if (value2.contains(x))
+                            {
+                                finalSet.add(x);
+                            }
+                        }
+                        return finalSet;
+                    }
+                }
+            } else
+            {
                 float value1 = operand1 instanceof Integer
                                    ? (Integer) operand1 : (Float) operand1;
                 float value2 = operand2 instanceof Integer
@@ -234,8 +320,84 @@ public class ExpressionExecutor extends StatementExecutor
                 case GT: return value1 >  value2;
                 case GE: return value1 >= value2;
             }
-        }
-        else {
+         } else if (specialInMode)
+        {
+            Integer value1 = (Integer) operand1;
+            TreeSet<Integer> value2 = (TreeSet) operand2;
+            if (nodeType == IN_NODE)
+            {
+                if (value2.contains(value1))
+                {
+                    return true;
+                } else
+                {
+                    return false;
+                }
+            }
+        } else if (setMode)
+        {
+
+            TreeSet<Integer> value1 = (TreeSet) operand1;
+            TreeSet<Integer> value2 = (TreeSet) operand2;
+
+            // Set operands.
+            switch (nodeType)
+            {
+                case LE:
+                {
+                    //value2 is a superset if it contains every entry in value 1.
+                    for(Integer x: value1)
+                    {
+                        if(!value2.contains(x))
+                            return false;
+                    }
+                    return true;
+                }
+                case GE:
+                {
+                     //value2 is a superset if it contains every entry in value 1.
+                    for(Integer x: value2)
+                    {
+                        if(!value1.contains(x))
+                            return false;
+                    }
+                    return true;
+                }
+                case NE:
+                {
+                    for(Integer x: value1)
+                    {
+                        if(!value2.contains(x))
+                            return true;
+                    }
+                    for(Integer x: value2)
+                    {
+                        if(!value1.contains(x))
+                            return true;
+                    }
+                    return false;
+                    
+                }
+                
+                case EQ:
+                {
+
+                    for(Integer x: value1)
+                    {
+                        if(!value2.contains(x))
+                            return false;
+                    }
+                    for(Integer x: value2)
+                    {
+                        if(!value1.contains(x))
+                            return false;
+                    }
+                    return true;
+
+                }
+            }
+        } else
+        {
             float value1 = operand1 instanceof Integer
                                ? (Integer) operand1 : (Float) operand1;
             float value2 = operand2 instanceof Integer
@@ -253,5 +415,14 @@ public class ExpressionExecutor extends StatementExecutor
         }
 
         return 0;  // should never get here
+    }
+    private void setUpSubRangeSet(int min,int max,
+            TreeSet<Integer> values)
+    {
+
+        for (int i = min; i <= max; i++)
+        {
+            values.add(i);
+        }
     }
 }
