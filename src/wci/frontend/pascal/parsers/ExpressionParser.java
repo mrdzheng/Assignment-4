@@ -605,8 +605,13 @@ public class ExpressionParser extends StatementParser
                      // Create a STRING_CONSTANT node as the root node.
                      ICodeNode node = ICodeFactory.createICodeNode(SUBRANGE);
                     //denotes the maximum value of the range.
-                    int value = (int) token.getValue();
-                    node.setAttribute(VALUE, value);
+                     Object value = 0;
+                    if (token.getValue()!=null){
+                        value = (int) token.getValue();
+                    }else{
+                        value= null;
+                    }
+                    node.setAttribute(VALUE,value);
                      rootNode.addChild(node);
 
                     token=nextToken();
